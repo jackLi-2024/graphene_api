@@ -63,6 +63,7 @@ class BaseApi():
         pass
 
     def entrance(self, info, **kwargs):
+        self.arguments = kwargs.get("condition", {})
         token = self.auth(info, **kwargs)
         return self.deal(token, **kwargs)
 
