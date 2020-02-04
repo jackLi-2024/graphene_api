@@ -15,40 +15,49 @@ import json
 import graphene
 import logging
 
-
-class QueryMutation(graphene.ObjectType):
-    users = os.listdir("resource")
-    result = []
-    for user in users:
-        if "py" in user or "pyc" in user:
+users = os.listdir("resource")
+result = []
+for user in users:
+    if "py" in user or "pyc" in user:
+        continue
+    try:
+        vs = os.listdir("resource/{}/view".format(user))
+    except Exception as e:
+        # logging.exception(e)
+        vs = []
+    for v in vs:
+        if ".py" in v:
+            v = v.replace(".py", "").replace(".pyc", "")
+        else:
             continue
         try:
-            vs = os.listdir("resource/{}/view".format(user))
+            exec("from resource.{}.view.{} import *".format(user, v))
         except Exception as e:
-            vs = []
-        for v in vs:
-            if ".py" in v:
-                v = v.replace(".py", "").replace(".pyc", "")
-            else:
-                continue
-            try:
-                exec("from resource.{}.view.{} import *".format(user, v))
-            except Exception as e:
-                continue
+            # logging.exception(e)
+            continue
 
-    vars = dict(locals())
-    for k, v in vars.items():
+vars = dict(locals())
+for k, v in vars.items():
+    try:
+        if v.__base__.__name__ == "BaseApi":
+            result.append(v)
+    except Exception as e:
+        # logging.exception(e)
+        pass
+res = {}
+for Api in result:
+    name = Api().name
+    exec("{}_m = Api()".format(name))
+    res[name] = name + "_m"
+
+
+class QueryMutation(graphene.ObjectType):
+    for k, v in res.items():
         try:
-            if v.__base__.__name__ == "BaseApi":
-                result.append(v)
-        except:
-            pass
-    for Api in result:
-        m = Api()
-        try:
-            exec("{} = m.api".format(str(m.name)))
-            exec("def resolve_{}(self, info, **kwargs): return m.entrance(info, **kwargs)".format(m.name))
-        except:
+            exec("{} = {}.api".format(k, v))
+            exec("def resolve_{}(self, info, **kwargs): return {}.entrance(info, **kwargs)".format(k, v))
+        except Exception as e:
+            logging.exception(e)
             pass
 
 
