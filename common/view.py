@@ -39,13 +39,17 @@ class BaseApi():
         for a in arg.__dir__():
             if a[:2] == "__" or a[-2:] == "__":
                 continue
-            elif "graphene" in str(eval("arg.{}".format(a))):
+            elif "graphene" in str(type(eval("arg.{}".format(a)))) or "graphene" in str(eval("arg.{}".format(a))):
                 arg_list.append(a)
         for a in ret.__dir__():
+
             if a[:2] == "__" or a[-2:] == "__":
                 continue
-            elif "graphene" in str(eval("ret.{}".format(a))):
+
+            elif "graphene" in str(type(eval("ret.{}".format(a)))) or "graphene" in str(eval("ret.{}".format(a))):
                 ret_list.append(a)
+            else:
+                print(type(eval("ret.{}".format(a))))
         if ret_list and arg_list:
             return graphene.Field(
                 self.create_class(rename="{}_return".format(self.name), parent_class="self.Return,graphene.ObjectType"),
@@ -57,15 +61,18 @@ class BaseApi():
                 self.create_class(rename="{}_return".format(self.name), parent_class="self.Return,graphene.ObjectType"),
                 description=self.description)
         else:
-            raise ("该模型创建失败: 请给指定返回模型")
+            raise Exception("该模型{}创建失败: 请给指定返回模型".format(self.name))
 
     def auth(self, info, **kwargs):
         pass
 
     def entrance(self, info, **kwargs):
         self.arguments = kwargs.get("condition", {})
-        token = self.auth(info, **kwargs)
-        return self.deal(token, **kwargs)
+        self.page_num = self.arguments.get("page_num", 1)
+        self.page_size = self.arguments.get("page_size", 10)
+        self.sort_field = self.arguments.get("sort_field", {})
+        self.token = self.auth(info, **kwargs)
+        return self.deal(self.token, **kwargs)
 
     def deal(self, token, **kwargs):
         return
